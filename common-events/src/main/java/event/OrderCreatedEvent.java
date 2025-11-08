@@ -1,6 +1,7 @@
-package com.example.payment.dto.event;
+package event;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,10 +12,10 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class OrderCreatedEvent {
-    private Long orderId;
+    private Long id;
     private String customerId;
-    private String customerEmail;
     private BigDecimal totalAmount;
     private List<OrderItemEvent> items;
     private LocalDateTime createdAt;

@@ -1,5 +1,10 @@
-package com.example.order_service.model;
+package com.example.order.model;
 
+import com.example.order.model.embedded.Address;
+import com.example.order.model.embedded.Customer;
+import com.example.order.model.enums.OrderStatus;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -16,7 +21,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.CreatedDate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,6 +38,11 @@ public class Order {
 
     // Клиентская информация (приходит извне)
     @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "id", column = @Column(name = "customer_id")),
+            @AttributeOverride(name = "email", column = @Column(name = "customer_email")),
+            @AttributeOverride(name = "name", column = @Column(name = "customer_name"))
+    })
     private Customer customer;
 
     // Статус и сумма заказа
@@ -46,9 +55,16 @@ public class Order {
 
     // Адрес доставки
     @Embedded
-    private Address shippingAddress;
+    @AttributeOverrides({
+            @AttributeOverride(name = "street", column = @Column(name = "address_street")),
+            @AttributeOverride(name = "city", column = @Column(name = "address_city")),
+            @AttributeOverride(name = "state", column = @Column(name = "address_state")),
+            @AttributeOverride(name = "zipCode", column = @Column(name = "address_zip_code")),
+            @AttributeOverride(name = "country", column = @Column(name = "address_country"))
+    })
+    private Address address;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderItem> items = new ArrayList<>();
 
     @Column(nullable = false)

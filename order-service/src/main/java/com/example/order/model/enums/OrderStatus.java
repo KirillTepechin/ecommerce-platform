@@ -1,4 +1,4 @@
-package com.example.order_service.model;
+package com.example.order.model.enums;
 
 public enum OrderStatus {
     PENDING,        // Заказ создан, ожидает подтверждения
