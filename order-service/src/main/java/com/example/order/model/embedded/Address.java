@@ -1,20 +1,18 @@
-package com.example.order_service.model;
+package com.example.order.model.embedded;
 
 import jakarta.persistence.Embeddable;
-import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Embeddable
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class Address {
-    @NotNull
     private String street;
-    @NotNull
     private String city;
-    @NotNull
     private String state;
-    @NotNull
     private String zipCode;
-    @NotNull
     private String country;
 }

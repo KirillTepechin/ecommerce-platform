@@ -1,4 +1,4 @@
-package com.example.payment.dto.event;
+package event;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
