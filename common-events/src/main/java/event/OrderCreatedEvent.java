@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class OrderCreatedEvent {
-    private Long id;
+    private Long orderId;
     private String customerId;
     private BigDecimal totalAmount;
     private List<OrderItemEvent> items;
