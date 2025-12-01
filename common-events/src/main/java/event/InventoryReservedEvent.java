@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -15,4 +16,5 @@ public class InventoryReservedEvent {
     private Long orderId;
     private String customerId;
     private LocalDateTime reservedAt;
+    private BigDecimal totalAmount;
 }

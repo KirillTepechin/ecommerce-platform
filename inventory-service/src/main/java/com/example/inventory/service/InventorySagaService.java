@@ -123,6 +123,7 @@ public class InventorySagaService {
                 .orderId(originalEvent.getOrderId())
                 .customerId(originalEvent.getCustomerId())
                 .reservedAt(LocalDateTime.now())
+                .totalAmount(originalEvent.getTotalAmount())
                 .build();
 
         kafkaTemplate.send("inventory-reserved", event);

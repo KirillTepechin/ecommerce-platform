@@ -1,7 +1,7 @@
 package com.example.payment.service;
 
 import com.example.payment.model.Payment;
-import event.OrderCreatedEvent;
+import event.InventoryReservedEvent;
 import event.PaymentCompletedEvent;
 import event.PaymentFailedEvent;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +20,8 @@ public class PaymentProcessor {
     private final PaymentService paymentService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @KafkaListener(topics = "order-created", groupId = "payment-service-group")
-    public void handleOrderCreated(OrderCreatedEvent event) {
+    @KafkaListener(topics = "inventory-reserved", groupId = "payment-service-group")
+    public void handleOrderCreated(InventoryReservedEvent event) {
         log.info("Received OrderCreated event for order: {}", event.getOrderId());
         try {
             // Проверяем, не обрабатывали ли мы уже этот заказ

@@ -48,7 +48,6 @@ public class OrderService {
 
         // Публикуем событие в Kafka
         try {
-            //TODO: Проверить флоу
             orderEventPublisher.publishOrderCreatedEvent(savedOrder);
         } catch (Exception e) {
             log.error("Failed to publish OrderCreated event for order: {}", savedOrder.getId(), e);
