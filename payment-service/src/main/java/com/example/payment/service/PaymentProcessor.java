@@ -1,7 +1,7 @@
 package com.example.payment.service;
 
 import com.example.payment.model.Payment;
-import event.OrderCreatedEvent;
+import event.InventoryReservedEvent;
 import event.PaymentCompletedEvent;
 import event.PaymentFailedEvent;
 import lombok.RequiredArgsConstructor;
@@ -20,19 +20,19 @@ public class PaymentProcessor {
     private final PaymentService paymentService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @KafkaListener(topics = "order-created", groupId = "payment-service-group")
-    public void handleOrderCreated(OrderCreatedEvent event) {
-        log.info("Received OrderCreated event for order: {}", event.getId());
+    @KafkaListener(topics = "inventory-reserved", groupId = "payment-service-group")
+    public void handleOrderCreated(InventoryReservedEvent event) {
+        log.info("Received OrderCreated event for order: {}", event.getOrderId());
         try {
             // Проверяем, не обрабатывали ли мы уже этот заказ
-            if (paymentService.existsByOrderId(event.getId())) {
-                log.warn("Payment already exists for order: {}, skipping", event.getId());
+            if (paymentService.existsByOrderId(event.getOrderId())) {
+                log.warn("Payment already exists for order: {}, skipping", event.getOrderId());
                 return;
             }
 
             // Создаем платеж
             final Payment payment = paymentService.createPayment(
-                    event.getId(),
+                    event.getOrderId(),
                     event.getCustomerId(),
                     event.getTotalAmount()
             );
@@ -41,7 +41,7 @@ public class PaymentProcessor {
             processPayment(payment);
 
         } catch (Exception e) {
-            log.error("Error processing payment for order: {}", event.getId(), e);
+            log.error("Error processing payment for order: {}", event.getOrderId(), e);
             // TODO: Отправить в Dead Letter Topic
         }
     }

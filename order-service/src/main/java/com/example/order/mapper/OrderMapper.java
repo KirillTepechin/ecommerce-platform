@@ -17,6 +17,7 @@ public interface OrderMapper {
 
     OrderDto toDto(Order order);
 
+    @Mapping(target = "orderId", source = "id")
     @Mapping(target = "customerId", source = "customer.customerId")
     OrderCreatedEvent toCreatedEvent(Order order);
 

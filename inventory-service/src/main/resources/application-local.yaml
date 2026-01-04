@@ -3,9 +3,9 @@ server:
 
 spring:
   application:
-    name: order-service
+    name: inventory-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/ep-order-service
+    url: jdbc:postgresql://localhost:5432/ep-inventory-service
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -18,17 +18,21 @@ spring:
       ddl-auto: validate
   kafka:
     bootstrap-servers: localhost:9091
+    consumer:
+      group-id: inventory-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        spring.json.value.default.type: event.OrderCreatedEvent
+        spring.json.use.type.headers: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    consumer:
-      group-id: order-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-
-    properties:
-      spring.json.add.type.headers: true
+      properties:
+        spring.json.write.dates.as.timestamps: false
 
 springdoc:
   api-docs:
@@ -48,7 +52,6 @@ eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${random.uuid}
-    status-page-url-path: /swagger-ui.html #TODO: поменять
 
 management:
   endpoints:
@@ -58,3 +61,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org.springframework.kafka: DEBUG
+    com.ecommerce.payment: DEBUG
+    org.hibernate.SQL: DEBUG

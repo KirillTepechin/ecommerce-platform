@@ -7,16 +7,14 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class OrderCreatedEvent {
+@NoArgsConstructor
+@AllArgsConstructor
+public class InventoryReservedEvent {
     private Long orderId;
     private String customerId;
+    private LocalDateTime reservedAt;
     private BigDecimal totalAmount;
-    private List<OrderItemEvent> items;
-    private LocalDateTime createdAt;
 }
