@@ -29,6 +29,7 @@ spring:
 
     properties:
       spring.json.add.type.headers: true
+      spring.json.write.dates.as.timestamps: false
 
 springdoc:
   api-docs:

@@ -102,37 +102,4 @@ public class InventoryReservationService {
         }
     }
 
-    public void releaseReservation(Long orderId) {
-        log.info("Releasing reservation for order: {}", orderId);
-
-        final List<InventoryReservation> reservations = reservationRepository.findByOrderId(orderId);
-
-        for (InventoryReservation reservation : reservations) {
-            if (reservation.getStatus() == ReservationStatus.RESERVED) {
-                // Возвращаем товары на склад
-                inventoryService.releaseProduct(
-                        reservation.getProductId(),
-                        reservation.getQuantity(),
-                        orderId
-                );
-
-                // Меняем статус на RELEASED
-                reservation.setStatus(ReservationStatus.RELEASED);
-                reservationRepository.save(reservation);
-
-                log.debug("Released reservation for product {} in order {}",
-                        reservation.getProductId(), orderId);
-            }
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<InventoryReservation> getReservationsByOrderId(Long orderId) {
-        return reservationRepository.findByOrderId(orderId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<InventoryReservation> getReservationsByStatus(ReservationStatus status) {
-        return reservationRepository.findByStatus(status);
-    }
 }
