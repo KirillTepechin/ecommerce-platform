@@ -4,6 +4,24 @@ server:
 spring:
   application:
     name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8086/realms/ecommerce-realm
+          jwk-set-uri: http://localhost:8086/realms/ecommerce-realm/protocol/openid-connect/certs
+
+      client:
+        registration:
+          keycloak:
+            client-id: api-gateway
+            client-secret: api-gateway-secret
+            authorization-grant-type: client_credentials
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8086/realms/ecommerce-realm
+            user-name-attribute: preferred_username
   cloud:
     gateway:
       server:
@@ -19,6 +37,21 @@ spring:
                 - Path=/api/orders/**
               filters:
                 - StripPrefix=1
+                - TokenRelay=
+                - name: UserContextFilter
+                - name: CircuitBreaker
+                  args:
+                    name: orderServiceCircuitBreaker
+                    fallbackUri: forward:/fallback/order-service
+
+            - id: order-service-admin
+              uri: lb://order-service
+              predicates:
+                - Path=/api/admin/orders/**
+              filters:
+                - StripPrefix=1
+                - TokenRelay=
+                - name: UserContextFilter
                 - name: CircuitBreaker
                   args:
                     name: orderServiceCircuitBreaker
@@ -30,6 +63,8 @@ spring:
                 - Path=/api/payments/**
               filters:
                 - StripPrefix=1
+                - TokenRelay=
+                - name: UserContextFilter
                 - name: CircuitBreaker
                   args:
                     name: paymentServiceCircuitBreaker
@@ -41,6 +76,8 @@ spring:
                 - Path=/api/inventory/**
               filters:
                 - StripPrefix=1
+                - TokenRelay=
+                - name: UserContextFilter
                 - name: CircuitBreaker
                   args:
                     name: inventoryServiceCircuitBreaker
@@ -104,6 +141,11 @@ spring:
       export:
         prometheus:
           enabled: true
+
+jwt:
+  user-id-claim: customer_id
+  user-name-claim: preferred_username
+  roles-claim: realm_access.roles
 
 # Eureka конфигурация
 eureka:

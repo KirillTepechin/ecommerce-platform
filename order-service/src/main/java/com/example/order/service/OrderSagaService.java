@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderSagaService {
 
     private final OrderRepository orderRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = {"inventory-reserved", "order-rejected", "payment-completed", "payment-failed"}, groupId = "order-service-group")
     // TODO: Отрефакторить для более красивой обработки событий

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,41 +33,31 @@ public class OrderController {
 
     // Получение заказа клиента
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderDto> getOrder(
-            @PathVariable Long orderId,
-            @RequestHeader("X-Customer-Id") String customerId) {
-
-        final OrderDto response = orderService.getCustomerOrder(orderId, customerId);
+    public ResponseEntity<OrderDto> getOrder(@PathVariable Long orderId) {
+        final OrderDto response = orderService.getCustomerOrder(orderId);
         return ResponseEntity.ok(response);
     }
 
     // Получение всех заказов клиента
     @GetMapping
-    public ResponseEntity<List<OrderDto>> getCustomerOrders(
-            Pageable pageable,
-            @RequestHeader("X-Customer-Id") String customerId) {
-
-        final List<OrderDto> responses = orderService.getCustomerOrders(customerId, pageable);
+    public ResponseEntity<List<OrderDto>> getCustomerOrders(Pageable pageable) {
+        final List<OrderDto> responses = orderService.getCustomerOrders(pageable);
         return ResponseEntity.ok(responses);
     }
 
     // Отмена заказа клиентом
     @PostMapping("/{orderId}/cancel")
-    public ResponseEntity<OrderDto> cancelOrder(
-            @PathVariable Long orderId,
-            @RequestHeader("X-Customer-Id") String customerId) {
+    public ResponseEntity<OrderDto> cancelOrder(@PathVariable Long orderId) {
 
-        final OrderDto response = orderService.cancelOrderByCustomer(orderId, customerId);
+        final OrderDto response = orderService.cancelOrderByCustomer(orderId);
         return ResponseEntity.ok(response);
     }
 
     // Получение истории статусов заказа
     @GetMapping("/{orderId}/tracking")
-    public ResponseEntity<OrderDto> trackOrder(
-            @PathVariable Long orderId,
-            @RequestHeader("X-Customer-Id") String customerId) {
+    public ResponseEntity<OrderDto> trackOrder(@PathVariable Long orderId) {
 
-        final OrderDto response = orderService.getCustomerOrder(orderId, customerId);
+        final OrderDto response = orderService.getCustomerOrder(orderId);
         return ResponseEntity.ok(response);
     }
 }

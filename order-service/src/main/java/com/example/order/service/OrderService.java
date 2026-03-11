@@ -4,6 +4,7 @@ import com.example.order.dto.OrderDto;
 import com.example.order.dto.request.CreateOrderRequest;
 import com.example.order.mapper.OrderMapper;
 import com.example.order.model.Order;
+import com.example.order.model.embedded.Customer;
 import com.example.order.model.enums.OrderStatus;
 import com.example.order.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -11,10 +12,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,10 +35,17 @@ public class OrderService {
     // Создание заказа клиентом
     @Transactional
     public OrderDto createOrder(CreateOrderRequest request) {
-        log.info("Creating order for customer: {}", request.getCustomer().getCustomerEmail());
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        log.info("Creating order for customer: {}", authentication.getName());
 
         // Создаем заказ
         final Order order = orderMapper.fromCreateRequest(request);
+        order.setCustomer(new Customer(
+                authentication.getName(),
+                (String)((Map<String, Object>) authentication.getDetails()).get("email"),
+                authentication.getName()
+        ));
         order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(
                 order.getItems().stream()
@@ -58,7 +69,9 @@ public class OrderService {
     }
 
     // Получение заказа клиента
-    public OrderDto getCustomerOrder(Long orderId, String customerId) {
+    public OrderDto getCustomerOrder(Long orderId) {
+        final String customerId = SecurityContextHolder.getContext().getAuthentication().getName();
+
         log.info("Fetching order ID: {} for customer: {}", orderId, customerId);
 
         final Order order = orderRepository.findByIdAndCustomerCustomerId(orderId, customerId)
@@ -70,7 +83,9 @@ public class OrderService {
     }
 
     // Получение всех заказов клиента
-    public List<OrderDto> getCustomerOrders(String customerId, Pageable pageable) {
+    public List<OrderDto> getCustomerOrders(Pageable pageable) {
+        final String customerId = SecurityContextHolder.getContext().getAuthentication().getName();
+
         log.info("Fetching all orders for customer: {}", customerId);
 
         return orderRepository.findAllByCustomerCustomerId(customerId, pageable)
@@ -81,7 +96,9 @@ public class OrderService {
 
     // Отмена заказа клиентом
     @Transactional
-    public OrderDto cancelOrderByCustomer(Long orderId, String customerId) {
+    public OrderDto cancelOrderByCustomer(Long orderId) {
+        final String customerId = SecurityContextHolder.getContext().getAuthentication().getName();
+
         log.info("Customer cancelling order ID: {}", orderId);
 
         final Order order = orderRepository.findByIdAndCustomerCustomerId(orderId, customerId)
@@ -105,7 +122,6 @@ public class OrderService {
         return orderMapper.toDto(cancelledOrder);
     }
 
-    // Для админского API (будет позже)
     public List<OrderDto> getOrdersByStatus(OrderStatus status, Pageable pageable) {
         return orderRepository.findAllByStatus(status, pageable)
                 .stream()

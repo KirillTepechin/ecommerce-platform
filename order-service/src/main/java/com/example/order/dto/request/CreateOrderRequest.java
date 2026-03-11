@@ -11,10 +11,6 @@ import java.util.List;
 public class CreateOrderRequest {
     @Valid
     @NotNull
-    private CreateOrderCustomerRequest customer;
-
-    @Valid
-    @NotNull
     private CreateOrderAddressRequest address;
 
     @NotEmpty

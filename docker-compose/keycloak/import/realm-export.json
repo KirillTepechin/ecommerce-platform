@@ -1,0 +1,108 @@
+{
+  "realm": "ecommerce-realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "clients": [
+    {
+      "clientId": "ecommerce-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:8080/*"],
+      "webOrigins": ["+"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "api-gateway",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "api-gateway-secret",
+      "redirectUris": ["http://localhost:8080/*"],
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true
+    },
+    {
+      "clientId": "order-service",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "secret": "order-service-secret"
+    },
+    {
+      "clientId": "payment-service",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "secret": "payment-service-secret"
+    },
+    {
+      "clientId": "inventory-service",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "secret": "inventory-service-secret"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "CUSTOMER",
+        "description": "Regular customer role"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Administrator role"
+      },
+      {
+        "name": "MANAGER",
+        "description": "Inventory manager role"
+      },
+      {
+        "name": "MONITOR",
+        "description": "Monitoring role for actuators"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "customer1",
+      "enabled": true,
+      "email": "customer1@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password123"
+        }
+      ],
+      "realmRoles": ["CUSTOMER"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "attributes": {
+        "customer_id": "12345"
+      }
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123"
+        }
+      ],
+      "realmRoles": ["ADMIN", "MONITOR"]
+    }
+  ],
+  "groups": [],
+  "defaultRoles": ["offline_access", "uma_authorization"]
+}
