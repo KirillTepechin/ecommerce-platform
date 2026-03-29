@@ -41,6 +41,8 @@ spring:
 outbox:
   publisher:
     fixed-delay-ms: 3000
+    max-attempts: 10
+    retry-delay-seconds: 5
 
 springdoc:
   api-docs:

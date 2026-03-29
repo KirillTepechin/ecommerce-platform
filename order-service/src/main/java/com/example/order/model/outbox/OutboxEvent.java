@@ -38,6 +38,15 @@ public class OutboxEvent {
     @Column(nullable = false)
     private OutboxStatus status;
 
+    @Column(nullable = false)
+    private Integer attempts;
+
+    @Column(nullable = false)
+    private LocalDateTime nextRetryAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String lastError;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
