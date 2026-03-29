@@ -1,5 +1,6 @@
 package com.example.analytics.stream;
 
+import com.example.analytics.service.AnalyticsMetricsStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import event.InventoryReservedEvent;
 import lombok.Builder;
@@ -26,6 +27,7 @@ import java.time.Duration;
 public class OrderAnalyticsStream {
 
     private final ObjectMapper objectMapper;
+    private final AnalyticsMetricsStore metricsStore;
 
     @Bean
     public org.apache.kafka.streams.kstream.KStream<String, InventoryReservedEvent> orderMetricsStream(StreamsBuilder builder) {
@@ -46,13 +48,19 @@ public class OrderAnalyticsStream {
                         Materialized.with(Serdes.String(), metricsSerde)
                 )
                 .toStream()
-                .peek((Windowed<String> window, HourlyOrderMetrics metrics) ->
-                        log.info("Hourly metrics [{} - {}]: totalSales={}, avgOrderValue={}, orders={} ",
-                                window.window().startTime(),
-                                window.window().endTime(),
-                                metrics.getTotalSales(),
-                                metrics.getAvgOrderValue(),
-                                metrics.getOrdersCount())
+                .peek((Windowed<String> window, HourlyOrderMetrics metrics) -> {
+                            metricsStore.upsert(
+                                    window.window().startTime(),
+                                    window.window().endTime(),
+                                    metrics
+                            );
+                            log.info("Hourly metrics [{} - {}]: totalSales={}, avgOrderValue={}, orders={} ",
+                                    window.window().startTime(),
+                                    window.window().endTime(),
+                                    metrics.getTotalSales(),
+                                    metrics.getAvgOrderValue(),
+                                    metrics.getOrdersCount());
+                        }
                 );
 
         return stream;

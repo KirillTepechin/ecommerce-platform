@@ -59,7 +59,7 @@ docker exec kafka-1 kafka-console-consumer --bootstrap-server kafka-1:9092 --top
 
 ## 5) Kafka Streams analytics-service
 
-`analytics-service` builds hourly aggregations from `inventory-reserved`:
+`analytics-service` builds hourly aggregations from `inventory-reserved` and stores metrics to MongoDB (`ep-analytics.hourly_order_metrics`):
 - total sales
 - avg order value
 - number of orders
@@ -75,3 +75,9 @@ SPRING_PROFILES_ACTIVE=local ./gradlew :analytics-service:bootRun
 - `order-service` producer is idempotent with `acks=all`.
 - Transactional outbox (`order_outbox`) stores order events inside DB transaction.
 - Scheduled outbox publisher sends events to Kafka in producer transaction.
+
+Check stored metrics:
+
+```bash
+docker exec mongodb mongosh ep-analytics --eval "db.hourly_order_metrics.find().pretty()"
+```

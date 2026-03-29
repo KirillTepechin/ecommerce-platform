@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: analytics-service
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/ep-analytics
+      auto-index-creation: true
   kafka:
     bootstrap-servers: localhost:9091,localhost:9093,localhost:9095
     streams:
