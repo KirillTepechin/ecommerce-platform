@@ -137,6 +137,6 @@ public class InventorySagaService {
                 .rejectedAt(LocalDateTime.now())
                 .build();
 
-        kafkaTemplate.send("order-rejected", event);
+        kafkaTemplate.send("order-rejected", String.valueOf(event.getOrderId()), event);
     }
 }

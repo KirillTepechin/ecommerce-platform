@@ -19,7 +19,7 @@ public class OrderEventPublisher {
 
     public void publishOrderCreatedEvent(Order order) {
         OrderCreatedEvent event = orderMapper.toCreatedEvent(order);
-        kafkaTemplate.send("order-created", event);
+        kafkaTemplate.send("order-created", String.valueOf(event.getOrderId()), event);
         log.info("Published OrderCreated event for order: {}", order.getId());
     }
 }
