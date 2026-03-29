@@ -1,0 +1,19 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: analytics-service
+  kafka:
+    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095
+    streams:
+      application-id: analytics-service-v1
+      properties:
+        processing.guarantee: exactly_once_v2
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

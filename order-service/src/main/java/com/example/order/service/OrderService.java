@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.example.order.service.outbox.OrderOutboxService;
+import event.OrderCreatedEvent;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -31,6 +34,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     private final OrderEventPublisher orderEventPublisher;
+
+    private final OrderOutboxService orderOutboxService;
 
     // Создание заказа клиентом
     @Transactional
@@ -57,13 +62,9 @@ public class OrderService {
         final Order savedOrder = orderRepository.save(order);
         log.info("Order created successfully with ID: {}", savedOrder.getId());
 
-        // Публикуем событие в Kafka
-        try {
-            orderEventPublisher.publishOrderCreatedEvent(savedOrder);
-        } catch (Exception e) {
-            log.error("Failed to publish OrderCreated event for order: {}", savedOrder.getId(), e);
-            // Можно добавить retry logic или сохранить в outbox table
-        }
+        OrderCreatedEvent orderCreatedEvent = orderEventPublisher.buildOrderCreatedEvent(savedOrder);
+        orderOutboxService.addOrderCreatedEvent(savedOrder, orderCreatedEvent);
+        log.info("OrderCreated event saved to outbox for order: {}", savedOrder.getId());
 
         return orderMapper.toDto(savedOrder);
     }
