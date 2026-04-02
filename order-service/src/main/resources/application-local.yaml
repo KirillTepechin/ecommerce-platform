@@ -17,10 +17,15 @@ spring:
     hibernate:
       ddl-auto: validate
   kafka:
-    bootstrap-servers: localhost:9091
+    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095,localhost:29092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        acks: all
+        max.in.flight.requests.per.connection: 5
+        retries: 10
     consumer:
       group-id: order-service-group
       auto-offset-reset: earliest
@@ -30,6 +35,12 @@ spring:
     properties:
       spring.json.add.type.headers: true
       spring.json.write.dates.as.timestamps: false
+
+outbox:
+  publisher:
+    fixed-delay-ms: 3000
+    max-attempts: 10
+    retry-delay-seconds: 5
 
 springdoc:
   api-docs:

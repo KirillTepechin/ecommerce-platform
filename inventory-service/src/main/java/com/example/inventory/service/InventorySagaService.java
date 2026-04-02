@@ -30,23 +30,15 @@ public class InventorySagaService {
     public void handleOrderCreated(OrderCreatedEvent event) {
         log.info("Processing inventory reservation for order: {}", event.getOrderId());
 
-        try {
-            // Пытаемся зарезервировать все товары из заказа
-            boolean reservationSuccessful = reserveInventoryForOrder(event);
+        // Пытаемся зарезервировать все товары из заказа
+        boolean reservationSuccessful = reserveInventoryForOrder(event);
 
-            if (reservationSuccessful) {
-                // Публикуем событие успешного резервирования
-                publishInventoryReservedEvent(event);
-                log.info("Inventory reserved successfully for order: {}", event.getOrderId());
-            } else {
-                // Публикуем событие отказа (товара нет в наличии)
-                publishOrderRejectedEvent(event, "Insufficient inventory");
-                log.warn("Order rejected due to insufficient inventory: {}", event.getOrderId());
-            }
-
-        } catch (Exception e) {
-            log.error("Error processing inventory for order: {}", event.getOrderId(), e);
-            publishOrderRejectedEvent(event, "Inventory processing error: " + e.getMessage());
+        if (reservationSuccessful) {
+            publishInventoryReservedEvent(event);
+            log.info("Inventory reserved successfully for order: {}", event.getOrderId());
+        } else {
+            publishOrderRejectedEvent(event, "Insufficient inventory");
+            log.warn("Order rejected due to insufficient inventory: {}", event.getOrderId());
         }
     }
 
@@ -137,6 +129,6 @@ public class InventorySagaService {
                 .rejectedAt(LocalDateTime.now())
                 .build();
 
-        kafkaTemplate.send("order-rejected", event);
+        kafkaTemplate.send("order-rejected", String.valueOf(event.getOrderId()), event);
     }
 }
