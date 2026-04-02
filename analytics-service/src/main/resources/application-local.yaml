@@ -9,12 +9,23 @@ spring:
       uri: mongodb://localhost:27017/ep-analytics
       auto-index-creation: true
   kafka:
-    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095
+    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095,localhost:29092
     streams:
       application-id: analytics-service-v1
       properties:
         processing.guarantee: exactly_once_v2
         default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
+        spring.json.trusted.packages: "*"
+        properties.spring.json.value.default.type: event.InventoryReservedEvent
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.uuid}
 
 management:
   endpoints:

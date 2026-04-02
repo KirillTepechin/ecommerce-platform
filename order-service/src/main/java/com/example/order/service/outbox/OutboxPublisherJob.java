@@ -42,10 +42,7 @@ public class OutboxPublisherJob {
         for (OutboxEvent outboxEvent : events) {
             try {
                 OrderCreatedEvent event = objectMapper.readValue(outboxEvent.getPayload(), OrderCreatedEvent.class);
-                kafkaTemplate.executeInTransaction(operations -> {
-                    operations.send("order-created", event.getCustomerId(), event);
-                    return true;
-                });
+                kafkaTemplate.send("order-created", String.valueOf(event.getOrderId()), event);
                 outboxService.markPublished(outboxEvent);
             } catch (Exception ex) {
                 log.error("Failed to publish outbox event {}", outboxEvent.getId(), ex);

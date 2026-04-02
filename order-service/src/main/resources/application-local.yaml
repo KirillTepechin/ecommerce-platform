@@ -17,13 +17,11 @@ spring:
     hibernate:
       ddl-auto: validate
   kafka:
-    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095
+    bootstrap-servers: localhost:9091,localhost:9093,localhost:9095,localhost:29092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      transaction-id-prefix: order-service-tx-
       properties:
-        partitioner.class: com.example.order.config.CustomerPartitioner
         enable.idempotence: true
         acks: all
         max.in.flight.requests.per.connection: 5

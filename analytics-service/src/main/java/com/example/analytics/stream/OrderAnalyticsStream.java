@@ -1,11 +1,11 @@
 package com.example.analytics.stream;
 
 import com.example.analytics.service.AnalyticsMetricsStore;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import event.InventoryReservedEvent;
-import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -26,13 +26,12 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class OrderAnalyticsStream {
 
-    private final ObjectMapper objectMapper;
     private final AnalyticsMetricsStore metricsStore;
 
     @Bean
-    public org.apache.kafka.streams.kstream.KStream<String, InventoryReservedEvent> orderMetricsStream(StreamsBuilder builder) {
-        JsonSerde<InventoryReservedEvent> eventSerde = new JsonSerde<>(InventoryReservedEvent.class, objectMapper);
-        JsonSerde<HourlyOrderMetrics> metricsSerde = new JsonSerde<>(HourlyOrderMetrics.class, objectMapper);
+    public org.apache.kafka.streams.kstream.KStream<String, InventoryReservedEvent> orderMetricsStream(  StreamsBuilder builder) {
+        final JsonSerde<InventoryReservedEvent> eventSerde = new JsonSerde<>(InventoryReservedEvent.class);
+        final JsonSerde<HourlyOrderMetrics> metricsSerde = new JsonSerde<>(HourlyOrderMetrics.class);
 
         var stream = builder.stream(
                 "inventory-reserved",
@@ -67,30 +66,30 @@ public class OrderAnalyticsStream {
     }
 
     @Data
-    @Builder
+    @NoArgsConstructor
+    @Accessors(chain = true)
     public static class HourlyOrderMetrics {
         private BigDecimal totalSales;
         private BigDecimal avgOrderValue;
         private long ordersCount;
 
+
         public static HourlyOrderMetrics empty() {
-            return HourlyOrderMetrics.builder()
-                    .totalSales(BigDecimal.ZERO)
-                    .avgOrderValue(BigDecimal.ZERO)
-                    .ordersCount(0)
-                    .build();
+            return new HourlyOrderMetrics()
+                    .setTotalSales(BigDecimal.ZERO)
+                    .setAvgOrderValue(BigDecimal.ZERO)
+                    .setOrdersCount(0);
         }
 
         public HourlyOrderMetrics addOrder(BigDecimal orderAmount) {
-            BigDecimal newTotalSales = totalSales.add(orderAmount);
-            long newOrdersCount = ordersCount + 1;
-            BigDecimal newAverage = newTotalSales.divide(BigDecimal.valueOf(newOrdersCount), 2, java.math.RoundingMode.HALF_UP);
+            final BigDecimal newTotalSales = totalSales.add(orderAmount);
+            final long newOrdersCount = ordersCount + 1;
+            final BigDecimal newAverage = newTotalSales.divide(BigDecimal.valueOf(newOrdersCount), 2, java.math.RoundingMode.HALF_UP);
 
-            return HourlyOrderMetrics.builder()
-                    .totalSales(newTotalSales)
-                    .avgOrderValue(newAverage)
-                    .ordersCount(newOrdersCount)
-                    .build();
+            return new HourlyOrderMetrics()
+                    .setTotalSales(newTotalSales)
+                    .setAvgOrderValue(newAverage)
+                    .setOrdersCount(newOrdersCount);
         }
     }
 }

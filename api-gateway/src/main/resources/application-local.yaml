@@ -104,8 +104,8 @@ spring:
           slow-call-rate-threshold: 100
           slow-call-duration-threshold: 2s
       instances:
-        orderServiceCircuitBreaker:
-          base-config: default
+#        orderServiceCircuitBreaker:
+#          base-config: default
         paymentServiceCircuitBreaker:
           base-config: slow
         inventoryServiceCircuitBreaker:
