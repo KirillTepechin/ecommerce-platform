@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-service
+  name: analytics-service
   namespace: ecommerce
   labels:
-    app: order-service
+    app: analytics-service
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: order-service
+      app: analytics-service
   template:
     metadata:
       labels:
-        app: order-service
+        app: analytics-service
     spec:
       containers:
-        - name: order-service
-          image: ecommerce/order-service:v4
+        - name: analytics-service
+          image: ecommerce/analytics-service:v1
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8081
+            - containerPort: 8084
               name: http
 
           env:
@@ -29,25 +29,15 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: "kubernetes"
 
-            # PostgreSQL
-            - name: DB_URL
-              value: "jdbc:postgresql://order-service-postgresql-service:5432/order_db"
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: username
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-secret
-                  key: password
+            # MongoDB
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://admin:password@analytics-service-mongodb-service:27017/analytics_db?authSource=admin"
 
-            # Kafka — FIX: Исправлены адреса и порты
+            # Kafka
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-0.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-1.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-2.kafka-svc.ecommerce.svc.cluster.local:9092"
-            - name: KAFKA_CONSUMER_GROUP_ID
-              value: "order-service-group"
+            - name: KAFKA_STREAMS_APPLICATION_ID
+              value: "analytics-service-v1"
 
             # Keycloak
             - name: KEYCLOAK_ISSUER_URI
@@ -70,21 +60,21 @@ spec:
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 8081
+              port: 8084
             initialDelaySeconds: 90
             periodSeconds: 15
 
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: 8081
+              port: 8084
             initialDelaySeconds: 30
             periodSeconds: 10
 
           startupProbe:
             httpGet:
               path: /actuator/health
-              port: 8081
+              port: 8084
             initialDelaySeconds: 0
             periodSeconds: 10
             failureThreshold: 30
@@ -94,13 +84,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-service
+  name: analytics-service
   namespace: ecommerce
 spec:
   selector:
-    app: order-service
+    app: analytics-service
   ports:
-    - port: 8081
-      targetPort: 8081
+    - port: 8084
+      targetPort: 8084
       name: http
   type: ClusterIP

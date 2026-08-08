@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-service
+  name: payment-service
   namespace: ecommerce
   labels:
-    app: order-service
+    app: payment-service
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: order-service
+      app: payment-service
   template:
     metadata:
       labels:
-        app: order-service
+        app: payment-service
     spec:
       containers:
-        - name: order-service
-          image: ecommerce/order-service:v4
+        - name: payment-service
+          image: ecommerce/payment-service:v1
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8081
+            - containerPort: 8083
               name: http
 
           env:
@@ -31,7 +31,7 @@ spec:
 
             # PostgreSQL
             - name: DB_URL
-              value: "jdbc:postgresql://order-service-postgresql-service:5432/order_db"
+              value: "jdbc:postgresql://payment-service-postgresql-service:5432/payment_db"
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -43,11 +43,11 @@ spec:
                   name: postgres-secret
                   key: password
 
-            # Kafka — FIX: Исправлены адреса и порты
+            # Kafka
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-0.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-1.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-2.kafka-svc.ecommerce.svc.cluster.local:9092"
             - name: KAFKA_CONSUMER_GROUP_ID
-              value: "order-service-group"
+              value: "payment-service-group"
 
             # Keycloak
             - name: KEYCLOAK_ISSUER_URI
@@ -70,21 +70,21 @@ spec:
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 8081
+              port: 8083
             initialDelaySeconds: 90
             periodSeconds: 15
 
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: 8081
+              port: 8083
             initialDelaySeconds: 30
             periodSeconds: 10
 
           startupProbe:
             httpGet:
               path: /actuator/health
-              port: 8081
+              port: 8083
             initialDelaySeconds: 0
             periodSeconds: 10
             failureThreshold: 30
@@ -94,13 +94,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-service
+  name: payment-service
   namespace: ecommerce
 spec:
   selector:
-    app: order-service
+    app: payment-service
   ports:
-    - port: 8081
-      targetPort: 8081
+    - port: 8083
+      targetPort: 8083
       name: http
   type: ClusterIP

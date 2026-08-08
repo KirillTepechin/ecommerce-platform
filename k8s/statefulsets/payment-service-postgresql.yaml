@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: payment-service-postgresql-statefulset
+  namespace: ecommerce
+spec:
+  serviceName: "payment-postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service-postgresql
+  template:
+    metadata:
+      labels:
+        app: payment-service-postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:latest
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: payment_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          volumeMounts:
+            - name: payment-postgres-data
+              mountPath: /var/lib/postgresql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: payment-postgres-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service-postgresql-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: payment-service-postgresql
+  ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+  type: ClusterIP

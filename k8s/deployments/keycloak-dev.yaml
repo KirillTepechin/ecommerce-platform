@@ -26,6 +26,7 @@ spec:
             - "--hostname-strict=false"
             - "--hostname-strict-https=false"
             - "--proxy=edge"
+            - "--http-enabled=true"  # Явно включаем HTTP
           ports:
             - containerPort: 8080
           env:
