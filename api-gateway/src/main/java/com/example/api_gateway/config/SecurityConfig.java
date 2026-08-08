@@ -33,10 +33,11 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         // Публичные endpoints
                         .pathMatchers(
-                                "/actuator/health",
+                                "/actuator/health/**",
                                 "/actuator/info",
                                 "/oauth2/**",
-                                "/login/**"
+                                "/login/**",
+                                "/fallback/**"
                         ).permitAll()
 
                         .pathMatchers("/actuator/**").hasRole("MONITOR")

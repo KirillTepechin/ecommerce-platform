@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: analytics-service-mongodb-statefulset
+  namespace: ecommerce
+spec:
+  serviceName: "analytics-mongodb"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service-mongodb
+  template:
+    metadata:
+      labels:
+        app: analytics-service-mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:latest  # Changed from mongodb:latest to mongo:latest
+          ports:
+            - containerPort: 27017
+              name: mongodb
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: password
+            - name: MONGO_INITDB_DATABASE
+              value: analytics_db
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service-mongodb-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: analytics-service-mongodb
+  ports:
+    - port: 27017
+      protocol: TCP
+      targetPort: 27017
+  type: ClusterIP

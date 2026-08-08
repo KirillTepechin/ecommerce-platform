@@ -1,0 +1,85 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: inventory-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgresql:5432/inventory_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-0.kafka:29092,kafka-1.kafka:29092,kafka-2.kafka:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.write.dates.as.timestamps: false
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:inventory-service-group}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+        spring.json.value.default.type: event.OrderCreatedEvent
+        spring.json.use.type.headers: false
+
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/ecommerce-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://keycloak:8080/realms/ecommerce-realm/protocol/openid-connect/certs}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+  show-actuator: true
+
+# Eureka отключаем — в K8s используем DNS service discovery
+eureka:
+  client:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.ecommerce.inventory: ${LOG_LEVEL:INFO}
+    org.springframework.web: WARN
+    org.springframework.kafka: ${KAFKA_LOG_LEVEL:WARN}
+    org.hibernate.SQL: ${LOG_LEVEL:INFO}
+    com.ecommerce.payment: ${LOG_LEVEL:INFO}

@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: ecommerce
+  labels:
+    app: inventory-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory-service
+          image: ecommerce/inventory-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+
+          env:
+            # Активный профиль
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+
+            # PostgreSQL
+            - name: DB_URL
+              value: "jdbc:postgresql://inventory-service-postgresql-service:5432/inventory_db"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+
+            # Kafka
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-0.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-1.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-2.kafka-svc.ecommerce.svc.cluster.local:9092"
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: "inventory-service-group"
+
+            # Keycloak
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.ecommerce:8080/realms/ecommerce-realm"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.ecommerce:8080/ecommerce-realm/protocol/openid-connect/certs"
+
+            # Логирование
+            - name: LOG_LEVEL
+              value: "DEBUG"
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 15
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: inventory-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+      name: http
+  type: ClusterIP

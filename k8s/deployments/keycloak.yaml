@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:24.0
+          command: ["/opt/keycloak/bin/kc.sh"]
+          args:
+            - "start"
+            - "--db=postgres"
+            - "--db-url=jdbc:postgresql://keycloak-postgres-service:5432/keycloak"
+            - "--db-username=$(KC_DB_USERNAME)"
+            - "--db-password=$(KC_DB_PASSWORD)"
+            - "--hostname=keycloak.ecommerce.local"
+            - "--proxy-headers=xforwarded"
+            - "--http-enabled=true"
+            - "--cache=ispn"  # Важно для Kubernetes!
+            - "--cache-stack=kubernetes"  # Исправляет JGroups проблему
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: admin-password
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-username  # Исправлено с admin-password
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+            - name: QUARKUS_TRANSACTION_MANAGER_ENABLE_RECOVERY
+              value: "true"
+            - name: JAVA_OPTS_APPEND
+              value: "-Djboss.bind.address=0.0.0.0 -Djgroups.dns.query=keycloak"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "3Gi"
+              cpu: "2000m"
+          # Более надежные пробы с tcpSocket вместо httpGet
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ecommerce
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+  # TODO: РАБОТАЕТ!!!, но не портфордится

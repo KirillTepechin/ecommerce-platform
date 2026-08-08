@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:24.0
+          command: ["/opt/keycloak/bin/kc.sh"]
+          args:
+            - "start-dev"  # Dev режим — проще для разработки
+            - "--db=postgres"
+            - "--db-url=jdbc:postgresql://keycloak-postgres-service:5432/keycloak"
+            - "--db-username=$(KC_DB_USERNAME)"
+            - "--db-password=$(KC_DB_PASSWORD)"
+            - "--hostname-strict=false"
+            - "--hostname-strict-https=false"
+            - "--proxy=edge"
+            - "--http-enabled=true"  # Явно включаем HTTP
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: admin-password
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+            - name: KC_HOSTNAME
+              value: "keycloak.ecommerce"
+            - name: KC_HOSTNAME_PORT
+              value: "8080"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ecommerce
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
