@@ -1,1 +1,3 @@
 rootProject.name = 'analytics-service'
+include ':common-events'
+project(':common-events').projectDir = new File(settingsDir, '../common-events')

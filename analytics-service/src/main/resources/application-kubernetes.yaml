@@ -1,0 +1,54 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: analytics-service
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://admin:password@mongodb-service:27017/analytics_db?authSource=admin}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-0.kafka:29092,kafka-1.kafka:29092,kafka-2.kafka:29092}
+    streams:
+      application-id: ${KAFKA_STREAMS_APPLICATION_ID:analytics-service-v1}
+      properties:
+        processing.guarantee: exactly_once_v2
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.springframework.kafka.support.serializer.JsonSerde
+        spring.json.trusted.packages: "*"
+        properties.spring.json.value.default.type: event.InventoryReservedEvent
+
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://keycloak:8080/realms/ecommerce-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://keycloak:8080/realms/ecommerce-realm/protocol/openid-connect/certs}
+
+# Eureka отключаем — в K8s используем DNS service discovery
+eureka:
+  client:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.ecommerce.analytics: ${LOG_LEVEL:INFO}
+    org.springframework.web: WARN
+    org.springframework.kafka: ${KAFKA_LOG_LEVEL:WARN}

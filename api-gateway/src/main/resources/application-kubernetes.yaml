@@ -1,0 +1,165 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm
+          jwk-set-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm/protocol/openid-connect/certs
+      client:
+        registration:
+          keycloak:
+            client-id: api-gateway
+            client-secret: api-gateway-secret
+            authorization-grant-type: client_credentials
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm
+            user-name-attribute: preferred_username
+
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        - id: order-service
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=1
+            - TokenRelay=
+            - name: UserContextFilter
+            - name: CircuitBreaker
+              args:
+                name: orderServiceCircuitBreaker
+                fallbackUri: forward:/fallback/order-service
+
+        - id: order-service-admin
+          uri: http://order-service:8081
+          predicates:
+            - Path=/api/admin/orders/**
+          filters:
+            - StripPrefix=1
+            - TokenRelay=
+            - name: UserContextFilter
+            - name: CircuitBreaker
+              args:
+                name: orderServiceCircuitBreaker
+                fallbackUri: forward:/fallback/order-service
+
+        - id: payment-service
+          uri: http://payment-service:8082
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=1
+            - TokenRelay=
+            - name: UserContextFilter
+            - name: CircuitBreaker
+              args:
+                name: paymentServiceCircuitBreaker
+                fallbackUri: forward:/fallback/payment-service
+
+        - id: inventory-service
+          uri: http://inventory-service:8083
+          predicates:
+            - Path=/api/inventory/**
+          filters:
+            - StripPrefix=1
+            - TokenRelay=
+            - name: UserContextFilter
+            - name: CircuitBreaker
+              args:
+                name: inventoryServiceCircuitBreaker
+                fallbackUri: forward:/fallback/inventory-service
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+        event-consumer-buffer-size: 10
+        slow-call-duration-threshold: 5s
+        slow-call-rate-threshold: 50
+    instances:
+      orderServiceCircuitBreaker:
+        base-config: default
+      paymentServiceCircuitBreaker:
+        base-config: default
+      inventoryServiceCircuitBreaker:
+        base-config: default
+
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 15s
+    instances:
+      orderServiceCircuitBreaker:
+        timeout-duration: 15s
+      paymentServiceCircuitBreaker:
+        timeout-duration: 15s
+      inventoryServiceCircuitBreaker:
+        timeout-duration: 15s
+
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+    instances:
+      orderServiceRetry:
+        base-config: default
+      paymentServiceRetry:
+        base-config: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    circuitbreakers:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+jwt:
+  user-id-claim: customer_id
+  user-name-claim: preferred_username
+  roles-claim: realm_access.roles
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    io.github.resilience4j: DEBUG
+    org.springframework.cloud.gateway: DEBUG

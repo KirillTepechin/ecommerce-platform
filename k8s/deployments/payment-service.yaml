@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: ecommerce
+  labels:
+    app: payment-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: ecommerce/payment-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+              name: http
+
+          env:
+            # Активный профиль
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+
+            # PostgreSQL
+            - name: DB_URL
+              value: "jdbc:postgresql://payment-service-postgresql-service:5432/payment_db"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+
+            # Kafka
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-0.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-1.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-2.kafka-svc.ecommerce.svc.cluster.local:9092"
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: "payment-service-group"
+
+            # Keycloak
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.ecommerce:8080/realms/ecommerce-realm"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.ecommerce:8080/ecommerce-realm/protocol/openid-connect/certs"
+
+            # Логирование
+            - name: LOG_LEVEL
+              value: "DEBUG"
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 90
+            periodSeconds: 15
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 8083
+      targetPort: 8083
+      name: http
+  type: ClusterIP

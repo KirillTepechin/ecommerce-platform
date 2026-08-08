@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: ecommerce
+  labels:
+    app: analytics-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: ecommerce/analytics-service:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+              name: http
+
+          env:
+            # Активный профиль
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+
+            # MongoDB
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://admin:password@analytics-service-mongodb-service:27017/analytics_db?authSource=admin"
+
+            # Kafka
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-0.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-1.kafka-svc.ecommerce.svc.cluster.local:9092,kafka-2.kafka-svc.ecommerce.svc.cluster.local:9092"
+            - name: KAFKA_STREAMS_APPLICATION_ID
+              value: "analytics-service-v1"
+
+            # Keycloak
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.ecommerce:8080/realms/ecommerce-realm"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.ecommerce:8080/ecommerce-realm/protocol/openid-connect/certs"
+
+            # Логирование
+            - name: LOG_LEVEL
+              value: "DEBUG"
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+            initialDelaySeconds: 90
+            periodSeconds: 15
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: ecommerce
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - port: 8084
+      targetPort: 8084
+      name: http
+  type: ClusterIP
