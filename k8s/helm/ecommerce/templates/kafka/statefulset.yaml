@@ -1,0 +1,55 @@
+{{- if .Values.kafka.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: kafka-app
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: kafka-svc
+  replicas: {{ .Values.kafka.replicas | default 3 }}
+  selector:
+    matchLabels:
+      app: kafka-app
+  template:
+    metadata:
+      labels:
+        app: kafka-app
+    spec:
+      containers:
+        - name: kafka-container
+          image: "{{ .Values.kafka.image.repository }}:{{ .Values.kafka.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.kafka.port | default 9092 }}
+            - containerPort: 9093
+          env:
+            - name: REPLICAS
+              value: {{ .Values.kafka.replicas | default 3 | quote }}
+            - name: SERVICE
+              value: kafka-svc
+            - name: NAMESPACE
+              value: {{ .Values.namespace | default "ecommerce" }}
+            - name: SHARE_DIR
+              value: /mnt/kafka
+            - name: CLUSTER_ID
+              value: {{ .Values.kafka.clusterID | default "4L62ydgNTm6v-lkZ9Z7Sxw" }}
+            - name: DEFAULT_REPLICATION_FACTOR
+              value: {{ .Values.kafka.replicas | default 3 | quote }}
+            - name: DEFAULT_MIN_INSYNC_REPLICAS
+              value: {{ (mul (.Values.kafka.replicas | default 3) 2 | div 3 | default 2) | quote }}
+          resources:
+            {{- toYaml .Values.kafka.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /mnt/kafka
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.kafka.storage | default "1Gi" }}
+{{- end }}

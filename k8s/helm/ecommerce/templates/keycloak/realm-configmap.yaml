@@ -1,0 +1,13 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-config
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: keycloak
+    {{- include "ecommerce.labels" . | nindent 4 }}
+data:
+  realm-export.json: |
+{{ .Files.Get "files/realm-export.json" | indent 4 }}
+{{- end }}

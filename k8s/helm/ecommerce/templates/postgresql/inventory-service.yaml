@@ -1,0 +1,71 @@
+{{- if .Values.databases.inventory.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: inventory-service-postgresql-statefulset
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: inventory-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: "inventory-postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service-postgresql
+  template:
+    metadata:
+      labels:
+        app: inventory-service-postgresql
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.databases.inventory.image.repository }}:{{ .Values.databases.inventory.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.databases.inventory.port | default 5432 }}
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.databases.inventory.dbName | default "inventory_db" }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          resources:
+            {{- toYaml .Values.databases.inventory.resources | nindent 12 }}
+          volumeMounts:
+            - name: inventory-postgres-data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: inventory-postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.databases.inventory.storage | default "1Gi" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.databases.inventory.serviceSuffix | default "inventory-service-postgresql" }}-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: inventory-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: inventory-service-postgresql
+  ports:
+    - port: {{ .Values.databases.inventory.port | default 5432 }}
+      targetPort: {{ .Values.databases.inventory.port | default 5432 }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}

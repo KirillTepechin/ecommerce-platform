@@ -1,0 +1,122 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: keycloak
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.keycloak.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: realm-config
+          configMap:
+            name: keycloak-realm-config
+      containers:
+        - name: keycloak
+          image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
+          command: ["/opt/keycloak/bin/kc.sh"]
+          args:
+            {{- if eq .Values.keycloak.mode "prod" }}
+            - "start"
+            - "--db=postgres"
+            - "--db-url=jdbc:postgresql://keycloak-postgres-service:5432/keycloak"
+            - "--db-username=$(KC_DB_USERNAME)"
+            - "--db-password=$(KC_DB_PASSWORD)"
+            - "--hostname={{ .Values.keycloak.hostname }}"
+            - "--hostname-strict-https=false"
+            - "--proxy-headers=xforwarded"
+            - "--http-enabled=true"
+            - "--cache=ispn"
+            - "--cache-stack=kubernetes"
+            - "--import-realm"
+            {{- else }}
+            - "start-dev"
+            - "--db=postgres"
+            - "--db-url=jdbc:postgresql://keycloak-postgres-service:5432/keycloak"
+            - "--db-username=$(KC_DB_USERNAME)"
+            - "--db-password=$(KC_DB_PASSWORD)"
+            - "--hostname-strict=false"
+            - "--hostname-strict-https=false"
+            - "--proxy=edge"
+            - "--http-enabled=true"
+            - "--import-realm"
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.keycloak.port | default 8080 }}
+              name: http
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: admin-password
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-username
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+            {{- if eq .Values.keycloak.mode "prod" }}
+            - name: QUARKUS_TRANSACTION_MANAGER_ENABLE_RECOVERY
+              value: "true"
+            - name: JAVA_OPTS_APPEND
+              value: "-Djboss.bind.address=0.0.0.0 -Djgroups.dns.query=keycloak"
+            {{- end }}
+            {{- if eq .Values.keycloak.mode "dev" }}
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloak.hostname | default "keycloak.ecommerce" }}
+            - name: KC_HOSTNAME_PORT
+              value: {{ .Values.keycloak.port | default 8080 | quote }}
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            {{- end }}
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import/
+          {{- if .Values.keycloak.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.keycloak.startupProbe | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.keycloak.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.keycloak.readinessProbe | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: keycloak
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: {{ .Values.keycloak.port | default 8080 }}
+      targetPort: {{ .Values.keycloak.port | default 8080 }}
+      name: http
+      protocol: TCP
+  type: ClusterIP
+{{- end }}
