@@ -1,0 +1,39 @@
+{{- if .Values.kafkaTopics.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topics-init
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: kafka-topics-init
+    {{- include "ecommerce.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded
+    "helm.sh/hook-weight": "5"
+spec:
+  completions: 1
+  parallelism: 1
+  backoffLimit: {{ .Values.kafkaTopics.retry.maxRetries | default 30 }}
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: kafka-topics-init
+          image: "{{ .Values.kafkaTopics.image.repository }}:{{ .Values.kafkaTopics.image.tag }}"
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "Waiting for Kafka cluster to be ready..."
+              until nc -z kafka-0.kafka-svc.{{ .Values.namespace | default "ecommerce" }}.svc.cluster.local {{ .Values.kafka.port | default 9092 }}; do
+                sleep {{ .Values.kafkaTopics.retry.backoffSeconds | default 5 }}
+              done
+              echo "Kafka is ready. Creating topics..."
+              {{- range .Values.kafkaTopics.topics }}
+              kafka-topics --bootstrap-server kafka-0.kafka-svc.{{ $.Values.namespace | default "ecommerce" }}.svc.cluster.local:{{ $.Values.kafka.port | default 9092 }} --create --if-not-exists --topic {{ .name }} --partitions {{ .partitions | default 12 }} --replication-factor {{ $.Values.kafka.replicas | default 3 }}
+              {{- end }}
+              echo "All topics created successfully!"
+          resources:
+            {{- toYaml .Values.kafkaTopics.resources | nindent 12 }}
+{{- end }}

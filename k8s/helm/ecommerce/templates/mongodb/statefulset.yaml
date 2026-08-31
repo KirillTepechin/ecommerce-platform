@@ -1,0 +1,71 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: analytics-service-mongodb-statefulset
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: analytics-service-mongodb
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: "analytics-mongodb"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service-mongodb
+  template:
+    metadata:
+      labels:
+        app: analytics-service-mongodb
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mongodb
+          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.mongodb.port | default 27017 }}
+              name: mongodb
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: password
+            - name: MONGO_INITDB_DATABASE
+              value: {{ .Values.mongodb.dbName | default "analytics_db" }}
+          resources:
+            {{- toYaml .Values.mongodb.resources | nindent 12 }}
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.mongodb.storage | default "1Gi" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service-mongodb-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: analytics-service-mongodb
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: analytics-service-mongodb
+  ports:
+    - port: {{ .Values.mongodb.port | default 27017 }}
+      targetPort: {{ .Values.mongodb.port | default 27017 }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}

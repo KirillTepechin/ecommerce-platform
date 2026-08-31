@@ -1,0 +1,19 @@
+{{- if .Values.kafka.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-svc
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: kafka-app
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - name: "9092"
+      port: {{ .Values.kafka.port | default 9092 }}
+      protocol: TCP
+      targetPort: {{ .Values.kafka.port | default 9092 }}
+  selector:
+    app: kafka-app
+{{- end }}

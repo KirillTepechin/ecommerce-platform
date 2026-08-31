@@ -1,0 +1,72 @@
+{{- if .Values.databases.order.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: order-service-postgresql-statefulset
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: order-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: "order-postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service-postgresql
+  template:
+    metadata:
+      labels:
+        app: order-service-postgresql
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.databases.order.image.repository }}:{{ .Values.databases.order.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.databases.order.port | default 5432 }}
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.databases.order.dbName | default "order_db" }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          resources:
+            {{- toYaml .Values.databases.order.resources | nindent 12 }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        storageClassName: standard-retain
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.databases.order.storage | default "1Gi" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.databases.order.serviceSuffix | default "order-service-postgresql" }}-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: order-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: order-service-postgresql
+  ports:
+    - port: {{ .Values.databases.order.port | default 5432 }}
+      targetPort: {{ .Values.databases.order.port | default 5432 }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}
