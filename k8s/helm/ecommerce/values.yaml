@@ -200,7 +200,7 @@ services:
     replicas: 1
     image:
       repository: frontend
-      tag: v1
+      tag: v4
     port: 80
     resources:
       requests:
@@ -215,7 +215,7 @@ services:
     replicas: 2
     image:
       repository: api-gateway
-      tag: v2
+      tag: v3
     port: 9000
     resources:
       requests:
@@ -382,7 +382,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:3000,http://localhost:9000"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://ecommerce.local,http://localhost:3000,http://localhost:9000,http://localhost"
   rules:
     - host: ecommerce.local
       paths:

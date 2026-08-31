@@ -47,6 +47,7 @@ spec:
     - metadata:
         name: inventory-postgres-data
       spec:
+        storageClassName: standard-retain
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
