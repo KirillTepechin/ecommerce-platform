@@ -88,4 +88,3 @@ spec:
       targetPort: 8080
       name: http
   type: ClusterIP
-  # TODO: РАБОТАЕТ!!!, но не портфордится

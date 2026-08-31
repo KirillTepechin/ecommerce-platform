@@ -1,0 +1,71 @@
+{{- if .Values.keycloakPostgres.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-postgres
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: keycloak-postgres
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: keycloak-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-postgres
+  template:
+    metadata:
+      labels:
+        app: keycloak-postgres
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.keycloakPostgres.image.repository }}:{{ .Values.keycloakPostgres.image.tag }}"
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.keycloakPostgres.dbName | default "keycloak" }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+          ports:
+            - containerPort: {{ .Values.keycloakPostgres.port | default 5432 }}
+              name: postgres
+          resources:
+            {{- toYaml .Values.keycloakPostgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.keycloakPostgres.storage | default "10Gi" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-postgres-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: keycloak-postgres
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: keycloak-postgres
+  ports:
+    - port: {{ .Values.keycloakPostgres.port | default 5432 }}
+      targetPort: {{ .Values.keycloakPostgres.port | default 5432 }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}

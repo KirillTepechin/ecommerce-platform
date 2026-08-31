@@ -11,8 +11,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm
-          jwk-set-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm/protocol/openid-connect/certs
+          issuer-uri: http://keycloak.ecommerce.svc.cluster.local:8080/realms/ecommerce-realm
+          jwk-set-uri: http://keycloak.ecommerce.svc.cluster.local:8080/realms/ecommerce-realm/protocol/openid-connect/certs
       client:
         registration:
           keycloak:
@@ -22,7 +22,7 @@ spring:
             scope: openid,profile,email
         provider:
           keycloak:
-            issuer-uri: http://keycloak.ecommerce:8080/realms/ecommerce-realm
+            issuer-uri: http://keycloak.ecommerce.svc.cluster.local:8080/realms/ecommerce-realm
             user-name-attribute: preferred_username
 
   cloud:

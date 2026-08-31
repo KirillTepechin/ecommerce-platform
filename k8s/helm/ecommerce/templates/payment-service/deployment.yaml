@@ -1,0 +1,79 @@
+{{- if .Values.services.paymentService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: payment-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.paymentService.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: payment-service
+          image: "{{ .Values.images.registry }}/{{ .Values.services.paymentService.image.repository }}:{{ .Values.services.paymentService.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.paymentService.port | default 8083 }}
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: DB_URL
+              value: "jdbc:postgresql://{{ .Values.databases.payment.serviceSuffix | default "payment-service-postgresql" }}-service:5432/{{ .Values.databases.payment.dbName | default "payment_db" }}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ecommerce.kafkaBootstrapServers" . }}
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: "payment-service-group"
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/realms/{{ .Values.keycloak.realm | default "ecommerce-realm" }}"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/{{ .Values.keycloak.realm | default "ecommerce-realm" }}/protocol/openid-connect/certs"
+            - name: LOG_LEVEL
+              value: "DEBUG"
+          resources:
+            {{- toYaml .Values.services.paymentService.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.services.paymentService.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.services.paymentService.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.services.paymentService.startupProbe | nindent 12 }}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: payment-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: {{ .Values.services.paymentService.port | default 8083 }}
+      targetPort: {{ .Values.services.paymentService.port | default 8083 }}
+      name: http
+  type: ClusterIP
+{{- end }}

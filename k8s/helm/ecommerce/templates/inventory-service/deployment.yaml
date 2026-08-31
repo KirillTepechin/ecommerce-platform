@@ -1,0 +1,79 @@
+{{- if .Values.services.inventoryService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: inventory-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.inventoryService.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: inventory-service
+          image: "{{ .Values.images.registry }}/{{ .Values.services.inventoryService.image.repository }}:{{ .Values.services.inventoryService.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.inventoryService.port | default 8082 }}
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: DB_URL
+              value: "jdbc:postgresql://{{ .Values.databases.inventory.serviceSuffix | default "inventory-service-postgresql" }}-service:5432/{{ .Values.databases.inventory.dbName | default "inventory_db" }}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ecommerce.kafkaBootstrapServers" . }}
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: "inventory-service-group"
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/realms/{{ .Values.keycloak.realm | default "ecommerce-realm" }}"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/{{ .Values.keycloak.realm | default "ecommerce-realm" }}/protocol/openid-connect/certs"
+            - name: LOG_LEVEL
+              value: "DEBUG"
+          resources:
+            {{- toYaml .Values.services.inventoryService.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.services.inventoryService.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.services.inventoryService.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.services.inventoryService.startupProbe | nindent 12 }}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: inventory-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: inventory-service
+  ports:
+    - port: {{ .Values.services.inventoryService.port | default 8082 }}
+      targetPort: {{ .Values.services.inventoryService.port | default 8082 }}
+      name: http
+  type: ClusterIP
+{{- end }}

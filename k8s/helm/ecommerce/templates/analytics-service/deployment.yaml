@@ -1,0 +1,69 @@
+{{- if .Values.services.analyticsService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: analytics-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.analyticsService.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: analytics-service
+          image: "{{ .Values.images.registry }}/{{ .Values.services.analyticsService.image.repository }}:{{ .Values.services.analyticsService.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.analyticsService.port | default 8084 }}
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: SPRING_DATA_MONGODB_URI
+              value: "mongodb://{{ .Values.secrets.mongodb.username }}:{{ .Values.secrets.mongodb.password }}@analytics-service-mongodb-service:{{ .Values.mongodb.port | default 27017 }}/{{ .Values.mongodb.dbName | default "analytics_db" }}?authSource=admin"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ecommerce.kafkaBootstrapServers" . }}
+            - name: KAFKA_STREAMS_APPLICATION_ID
+              value: "analytics-service-v1"
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/realms/{{ .Values.keycloak.realm | default "ecommerce-realm" }}"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/{{ .Values.keycloak.realm | default "ecommerce-realm" }}/protocol/openid-connect/certs"
+            - name: LOG_LEVEL
+              value: "DEBUG"
+          resources:
+            {{- toYaml .Values.services.analyticsService.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.services.analyticsService.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.services.analyticsService.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.services.analyticsService.startupProbe | nindent 12 }}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: analytics-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - port: {{ .Values.services.analyticsService.port | default 8084 }}
+      targetPort: {{ .Values.services.analyticsService.port | default 8084 }}
+      name: http
+  type: ClusterIP
+{{- end }}

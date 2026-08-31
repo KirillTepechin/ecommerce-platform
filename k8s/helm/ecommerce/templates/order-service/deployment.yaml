@@ -1,0 +1,79 @@
+{{- if .Values.services.orderService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: order-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.orderService.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: order-service
+          image: "{{ .Values.images.registry }}/{{ .Values.services.orderService.image.repository }}:{{ .Values.services.orderService.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.orderService.port | default 8081 }}
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+            - name: DB_URL
+              value: "jdbc:postgresql://{{ .Values.databases.order.serviceSuffix | default "order-service-postgresql" }}-service:5432/{{ .Values.databases.order.dbName | default "order_db" }}"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ include "ecommerce.kafkaBootstrapServers" . }}
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: "order-service-group"
+            - name: KEYCLOAK_ISSUER_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/realms/{{ .Values.keycloak.realm | default "ecommerce-realm" }}"
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak.{{ .Values.namespace | default "ecommerce" }}:{{ .Values.keycloak.port | default 8080 }}/{{ .Values.keycloak.realm | default "ecommerce-realm" }}/protocol/openid-connect/certs"
+            - name: LOG_LEVEL
+              value: "DEBUG"
+          resources:
+            {{- toYaml .Values.services.orderService.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.services.orderService.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.services.orderService.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.services.orderService.startupProbe | nindent 12 }}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: order-service
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: {{ .Values.services.orderService.port | default 8081 }}
+      targetPort: {{ .Values.services.orderService.port | default 8081 }}
+      name: http
+  type: ClusterIP
+{{- end }}

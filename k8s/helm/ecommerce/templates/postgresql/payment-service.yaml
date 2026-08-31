@@ -1,0 +1,72 @@
+{{- if .Values.databases.payment.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: payment-service-postgresql-statefulset
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: payment-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  serviceName: "payment-postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service-postgresql
+  template:
+    metadata:
+      labels:
+        app: payment-service-postgresql
+        {{- include "ecommerce.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.databases.payment.image.repository }}:{{ .Values.databases.payment.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.databases.payment.port | default 5432 }}
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.databases.payment.dbName | default "payment_db" }}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          resources:
+            {{- toYaml .Values.databases.payment.resources | nindent 12 }}
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        storageClassName: standard-retain
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.databases.payment.storage | default "1Gi" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.databases.payment.serviceSuffix | default "payment-service-postgresql" }}-service
+  namespace: {{ .Values.namespace | default "ecommerce" }}
+  labels:
+    app: payment-service-postgresql
+    {{- include "ecommerce.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: payment-service-postgresql
+  ports:
+    - port: {{ .Values.databases.payment.port | default 5432 }}
+      targetPort: {{ .Values.databases.payment.port | default 5432 }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}
